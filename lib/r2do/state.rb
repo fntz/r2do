@@ -18,12 +18,8 @@ module R2do
 
   class State
     # @return [Hash] the collection of categories created by the user.
-  	attr_accessor :categories
-    # @return [Category] the current category the user is working on.
-    attr_accessor :current_category
-    # @return [bool] true if the state has been modified
-    attr_accessor :modified
-
+    attr_reader :categories
+    
     # Creates a new instance of the State
     #
     def initialize()
@@ -31,29 +27,33 @@ module R2do
     end
 
     def init()
-      @categories = Hash.new
-      @current_category = nil
-      @modified = false
+      @categories = Category.all
     end
 
     def reset()
       init()
-      @modified = true
     end
 
+    def current_category
+      Category.current || nil
+    end
+    
     # Sets a Category as the current one.
     #
-    # @param [Category] category the category to be set as current.
+    # @param [category_name] name the category to be set as current.
+    # @raise [CategoryNotFoundError] if category not found 
     # @return [void]
-    def set_current(category)
-      @current_category = category
+    def set_current(category_name)
+      category = Category.first(:name => category_name)
+      raise CategoryNotFoundError.new if category.nil?
+      Category.current = category
     end
 
     # Clears the current category
     #
     # return [void]
     def clear_current_category()
-      @current_category = nil
+      Category.current.update!(:current => false)
     end
 
     # Checks if a category with a specific name already exists.
@@ -61,7 +61,7 @@ module R2do
     # @param [String] category_name the name of the category to check.
     # @return [bool] true if the category is already present.
     def contains?(category_name)
-      @categories.has_key?(category_name)
+      return Category.contains?(category_name)
     end
 
     # Retrieves a specific Category.
@@ -69,32 +69,43 @@ module R2do
     # @param [String] category_name the name of the category to retrieve.
     # @return [Category] the category identified by category_name.
     def get(category_name)
-      @categories[category_name]
+      Category.first(:name => category_name)
     end
 
     # Adds a category.
     #
-    # @param [Category] category the category to add.
+    # @param [Category] must be hash with attributes.
     # @return [void]
+    # Example
+    # @state.add({:name => 'foo'})
     def add(category)
-      @categories[category.name] = category
+      Category.create(category)
     end
 
-
-    def refresh(original_name, category)
-      @categories.delete(original_name) { raise CategoryNotFoundError.new() }
-      @categories[category.name] = category
+    #Rename category
+    # @param original_name - name for category
+    # @param new_category  - new name for category
+    # @raise [CategoryAlreadyExistsError] 
+    # @raise [CategoryNotFoundError]
+    def refresh(original_name, new_category)
+      old = Category.first(:name => original_name)
+      unless old.nil?
+        raise CategoryAlreadyExistsError.new if Category.first(:name => new_category)
+        old.update!(:name => new_category)
+      else 
+        raise CategoryNotFoundError.new   
+      end
     end
 
-    # Removes the category from the state.
+    # Removes the category from the state and from table.
     #
     # @param [Category] category the category to remove.
     # @raise [Exceptions::CategoryNotFoundError] if category is not found.
     # @return [void]
     def remove(category)
-      @categories.delete(category.name) { raise CategoryNotFoundError.new() }
+      cat = Category.first(:name => category)
+      @categories.delete(cat) { raise CategoryNotFoundError.new() }
+      cat.destroy
     end
-
   end
-
 end

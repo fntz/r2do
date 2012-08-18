@@ -14,7 +14,7 @@
 #  limitations under the License.
 #
 
-require 'yaml'
+require 'data_mapper'
 
 require 'r2do/commands/command'
 require 'r2do/ui'
@@ -45,9 +45,8 @@ module R2do
     def initialize(args)
       @args = args
 
-      @file_name = ".r2do.yml"
-      @state = load_state(@file_name)
-
+      @file_name = ".r2do.db" 
+      @state = State.new 
       @commands = create_commands()
     end
 
@@ -56,7 +55,7 @@ module R2do
     # @return [void]
     def run()
       option = @args[0]
-      
+
       if @args.length > 0
         cmd = find_command(option)
         if not cmd.nil?
@@ -73,15 +72,6 @@ module R2do
       end
     end
 
-    # Saves the state of the application
-    #
-    # @return [void]
-    def save()
-      if @state.modified
-        save_state(@file_name, @state)
-      end
-    end
-
     private
 
     # Creates the list of commands the application responds to.
@@ -89,11 +79,11 @@ module R2do
     # @return [Array] the collection of commands.
     def create_commands()
       cmd_list = Array.new
-      cmd_list << InitCommand.new(@state)
-      cmd_list << CategoryCommand.new(@state)
-      cmd_list << TaskCommand.new(@state)
-      cmd_list << DisplayCategoriesCommand.new(@state)
-      cmd_list << NowCommand.new(@state)
+      cmd_list << InitCommand.new()
+      cmd_list << CategoryCommand.new()
+      cmd_list << TaskCommand.new()
+      cmd_list << DisplayCategoriesCommand.new()
+      cmd_list << NowCommand.new()
 
       cmd_list << HelpCommand.new(Array.new(cmd_list))
 

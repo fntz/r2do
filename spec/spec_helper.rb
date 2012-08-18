@@ -14,7 +14,15 @@
 #  limitations under the License.
 #
 
-require 'simplecov'
-SimpleCov.start
+#require 'simplecov'
+#SimpleCov.start
 
 require 'r2do'
+require 'dm-rspec'
+require 'data_mapper'
+DataMapper.setup(:default, 'sqlite::memory:')
+
+RSpec.configure do |config|
+  config.include(DataMapper::Matchers)
+  config.before(:each) { DataMapper.auto_migrate! }
+end

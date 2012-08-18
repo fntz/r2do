@@ -24,10 +24,9 @@ module R2do
       DELETE    = "--delete"
       EDIT      = "--edit"
 
-      def initialize(state)
+      def initialize()
         super('c', 'category', 'Creates a new category.')
-
-        @state = state
+        @state = State.new
       end
 
       # Creates a new category or makes a category current in the state if a category with the
@@ -42,7 +41,7 @@ module R2do
         end
 
         option = args[1]
-        
+
         if option.eql?(DISPLAY)
           display_current_category(args)
         elsif option.eql?(EDIT)
@@ -72,12 +71,8 @@ module R2do
 
           original_name = cat.name
           name = UI.input("Enter new name:")
-
-          cat.rename(name)
-
-          @state.refresh(original_name, cat)
-          @state.modified = true
-
+          @state.refresh(original_name, name)
+          
           UI.status("The category as been modified.")
         end
       end
@@ -108,10 +103,8 @@ module R2do
         value = UI.input("This action cannot be undone. Continue? [Yn]")
         if value == YES
           cat = @state.current_category
-          @state.remove(cat)
-          @state.clear_current_category()
-          @state.modified = true
-
+          @state.remove(cat.name)
+          
           UI.status("Category '#{cat.name}' has been deleted.")
         end
       end
@@ -127,13 +120,10 @@ module R2do
           cat = @state.get(category_name)
         else
           extra = 'new '
-          cat = Category.new(category_name)
-          @state.add(cat)
+          cat = @state.add(:name => category_name)
         end
 
-        @state.set_current(cat)
-        @state.modified = true
-
+        
         UI.status("Switched to #{extra}category '#{category_name}'")
       end
 

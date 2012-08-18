@@ -18,10 +18,9 @@ module R2do
   module Commands
     class DisplayCategoriesCommand < Command
 
-      def initialize(state)
+      def initialize()
         super('l', 'list', 'Displays all the categories.')
-
-        @state = state
+        @state = State.new
       end
 
       # Displays all the categories available
@@ -32,9 +31,9 @@ module R2do
         if @state.categories.empty?
             UI.status("No categories to display")
         else
-          @state.categories.each do |key, value|
-            current = (value == @state.current_category && "*") || ' '
-            UI.status("#{current} #{value.name}")
+          @state.categories.each do |category|
+            current = (category.current? && "*") || ' '
+            UI.status("#{current} #{category.name}")
           end
         end
       end

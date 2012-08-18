@@ -18,10 +18,9 @@ module R2do
   module Commands
     class NowCommand < Command
 
-      def initialize(state)
+      def initialize()
         super('n', 'now', 'Displays the information for the current category.')
-
-        @state = state
+        @state = State.new
       end
 
       # Creates a new category or makes a category current in the state if a category with the

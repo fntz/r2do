@@ -20,10 +20,9 @@ module R2do
 
       YES = "Y"
 
-      def initialize(state)
+      def initialize()
         super('i', 'init', 'Initializes a new clean session.')
-
-        @state = state
+        @state = State.new    
       end
 
       # Initializes the applications and resets the datafile
@@ -36,7 +35,6 @@ module R2do
         value = UI.input("Any previous session will be lost. Continue? [Yn]")
         if value == YES
           @state.reset()
-          @state.modified = true
           UI.status("Initialized a new session of r2do.")
         else
           UI.status("Continuing with current session.")

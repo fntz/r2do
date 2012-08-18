@@ -27,10 +27,9 @@ module R2do
       EDIT      = "--edit"
       ALL       = "--all"
 
-      def initialize(state)
+      def initialize()
         super('t', 'task', 'Adds a new task to the current category.')
-
-        @state = state
+        @state = State.new
       end
 
       # Creates a new task or makes a task current in the current category if a task with the
@@ -64,7 +63,7 @@ module R2do
           delete_task(args)
         elsif option.eql?(ALL)
           require_selected_task()
-          all_tasks()
+          all_tasks()  
         elsif option.start_with?("--")
           raise InvalidOptionError, "Invalid argument for the command. See 'r2do -h'."
         else
@@ -77,16 +76,14 @@ module R2do
       # @param [Array] args the arguments passed to the app by the user.
       # @return [void]
       def edit_current_task(args)
+        current = @state.current_category.tasks.current
         UI.status("Are you sure you want to edit the task:")
-        UI.status("   #{@state.current_category.current_task.description}")
+        UI.status("   #{current.description}")
         UI.new_line()
         value = UI.input("Continue? [Yn]")
         if value == YES
           desc = UI.input("Enter new description:")
-          task = @state.current_category.current_task
-          task.rename(desc)
-          @state.modified = true
-
+          current.update!(:description => desc)
           UI.status("The task as been modified.")
         end
       end
@@ -95,18 +92,17 @@ module R2do
       #
       # @param [Array] args the arguments passed to the app by the user.
       # @return [void]
+      # after delete set current task!!!!!!
       def delete_task(args)
+        current = @state.current_category.tasks.current
         UI.status("Are you sure you want to delete the task:")
-        UI.status("   #{@state.current_category.current_task.description}")
+        UI.status("   #{current.description}")
         UI.new_line()
         value = UI.input("This action cannot be undone. Continue? [Yn]")
         if value == YES
-          task = @state.current_category.current_task
-          @state.current_category.remove(task)
-          @state.current_category.clear_current_task()
-          @state.modified = true
+          current.destroy
 
-          UI.status("Task '#{task.description}' has been deleted.")
+          UI.status("Task '#{current.description}' has been deleted.")
         end
       end
 
@@ -115,8 +111,8 @@ module R2do
       # @param [Array] args the arguments passed to the app by the user.
       # @return [void]
       def show_current_task(args)
-        task = @state.current_category.current_task
-        UI.status(task.display())
+        task = @state.current_category.tasks.current
+        UI.status(task.to_s())
       end
 
       # Marks a task as completed.
@@ -124,11 +120,28 @@ module R2do
       # @param [Array] args the arguments passed to the app by the user.
       # @return [void]
       def mark_as_complete(args)
-        task = @state.current_category.current_task
+        task = @state.current_category.tasks.current
         task.completed()
         @state.modified = true
 
         UI.status("Task '%s' has been marked as completed." % task.description)
+      end
+
+      # List all tags in state
+      #
+      # @param [void]
+      # @return [void]
+      def all_tasks()
+        UI.status("    %-30s  %s" % ['Task', 'Category'])
+        UI.status("    " + "-"*51)
+
+        @state.categories.each do |category|
+          category.tasks.each do |task|
+            result = StringIO.new
+            result << "    %-30s  %s\n" % [task.description, category.name]
+            UI.status(result.string)
+          end
+        end
       end
 
       # Creates a new task or select an already existing one.
@@ -141,41 +154,20 @@ module R2do
         task_description = args[1..-1].join(' ')
         task = @state.current_category.find_by_description(task_description)
         if task.nil?
-          task = Task.new(task_description)
-          @state.current_category.add(task)
+          @state.current_category.tasks.create(:description => task_description)
 
           UI.status("Created new task.")
           UI.new_line()
         end
-
-        @state.current_category.set_current(task)
-        @state.modified = true
-
+        
         UI.status("Selected task '#{task_description}'")
-      end
-
-      # List all tags in state
-      #
-      # @param [void]
-      # @return [void]
-      def all_tasks()
-        UI.status("    %-30s  %s" % ['Task', 'Category'])
-        UI.status("    " + "-"*51)
-
-        @state.categories.each do |name, category|
-          category.tasks.each do |task|
-            result = StringIO.new
-            result << "    %-30s  %s\n" % [task.description, name]
-            UI.status(result.string)
-          end
-        end
       end
 
       # Checks that a task is currently selected.
       #
       # @return [void]
       def require_selected_task()
-        if @state.current_category.current_task.nil?
+        if @state.current_category.tasks.current.nil?
           raise TaskNotSelectedError, "This action requires a selected task."
         end
       end

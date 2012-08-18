@@ -17,52 +17,47 @@
 module R2do
 
   class Task
-    # @return [String] the description for this task.
-    attr_accessor :description
-    # @return [DateTime] the date and time of completion.
-    attr_accessor :date_done
-    # @return [DateTime] the date and time of creation
-    attr_accessor :date_created
+    include DataMapper::Resource
+   
 
-    MAX_LENGTH = 30
-
-    # Creates a new instance of a Task
-    #
-    # @param [String] desctiption the description for this task
-    def initialize(description)
-      if description.length > MAX_LENGTH
-        raise ArgumentError, "A task description has to be less than 30 characters."
+    property :id,           Serial
+    property :description,  String,   :key => true
+    property :done,         Boolean,  :default => false   
+    property :current,      Boolean,  :default => false
+    property :date_created, DateTime
+    property :date_done,    DateTime, :required => false     
+    
+    belongs_to :category
+    validates_presence_of :description
+    validates_length_of :description, :max => 30
+    before :save, :set_date_time
+    before :save do 
+      t = Task.current
+      #dirty
+      if t  
+        t.update!(:current => false)
       end
-
-      @description = description
-      @done = false
-      @date_created = DateTime.now
-      @date_done = nil
+      self.current = true
+    end
+    
+    def set_date_time
+      self.date_created = DateTime.now
     end
 
-    # Renames this Task
-    #
-    # @param [String] description the new value for the task
-    # @return [void]
-    def rename(description)
-      @description = description
+    def self.current
+      first(:current => true)
     end
 
-    # Gets the completed status of the specific task.
-    #
-    # @return [bool] true if the task is completed.
-    def done?()
-      return @done
+    def self.completed 
+      all(:done => true)
     end
-
+    
     # Flags the specific task as completed.
     #
     # @return [DateTime] the date and time of completion.
     def completed()
-      @done = true
-      @date_done = DateTime.now
+      self.update!(:date_done => DateTime.now, :done => true)
     end
-
     # Returns a string representation of this Task
     #
     # @return [String] the representation of this Task
@@ -72,28 +67,29 @@ module R2do
 
       if done?
         completed = 'x'
-        date = format_date(@date_done)
+        date = format_date()
       end
 
-      return "[%s] %-30s %s" % [completed, @description, date]
+      return "[%s] %-30s %s" % [completed, self.description, self.date_created]
     end
 
+    
     # Returns information regarding the state of this task.
     #
     # @return [String] the metadata for this task.
     def display()
-      date = format_date(@date_created)
-
+      date = format_date()
+      
       result = StringIO.new
 
       result << "Selected task:\n"
-      result << "   %s\n\n" % @description
+      result << "   %s\n\n" % self.description
       result << "Created:\n"
-      result << "   %s" % date
+      result << "   %s" % self.date_created
 
       if done?
         result << "\nCompleted:\n"
-        result << "   %s" % format_date(@date_done)
+        result << "   %s" % format_date()
       end
 
       return result.string
@@ -101,11 +97,11 @@ module R2do
 
     # Formats the date
     #
-    # @param [DateTime] date the date to parse
     # @return [String] the formatted date
-    def format_date(date)
-      date.strftime('%a %b %e, %Y')
+    def format_date()
+      self.date_created.strftime('%a %b %e, %Y')
     end
   end
 
 end
+
